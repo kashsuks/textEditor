@@ -3,9 +3,7 @@ from tkinter import filedialog, Menu
 
 def save_as():
     t = text.get("1.0", "end-1c")
-    savelocation = filedialog.asksaveasfilename(defaultextension=".txt",
-                                               filetypes=[("Text files", "*.txt"),
-                                                          ("All files", "*.*")])
+    savelocation = filedialog.asksaveasfilename(defaultextension=".txt",filetypes=[("Text files", "*.txt"),("All files", "*.*")])
     if savelocation:
         try:
             with open(savelocation, "w") as file1:
