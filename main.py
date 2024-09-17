@@ -45,10 +45,7 @@ def handle_configure(event=None):
         text.config(width=root.winfo_width(), height=root.winfo_height())
 
 root = tk.Tk()
-root.title("Text Editor")
-root.geometry("800x600")  # Initial window size
-
-fullscreen = False
+root.title("Text Editor - Kashyap Sukshavasi")
 
 text = tk.Text(root)
 text.grid(sticky="nsew")
