@@ -3,7 +3,9 @@ from tkinter import filedialog, Menu
 
 def save_as():
     t = text.get("1.0", "end-1c")
-    savelocation = filedialog.asksaveasfilename(defaultextension=".txt",filetypes=[("Text files", "*.txt"),("All files", "*.*")])
+    savelocation = filedialog.asksaveasfilename(defaultextension=".txt",
+                                               filetypes=[("Text files", "*.txt"),
+                                                          ("All files", "*.*")])
     if savelocation:
         try:
             with open(savelocation, "w") as file1:
@@ -44,6 +46,10 @@ def handle_configure(event=None):
 
 root = tk.Tk()
 root.title("Text Editor - Kashyap Sukshavasi")
+root.geometry("800x600")  # Initial window size
+
+# Initialize the fullscreen variable globally
+fullscreen = False
 
 text = tk.Text(root)
 text.grid(sticky="nsew")
