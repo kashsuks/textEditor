@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, ttk
+from tkinter import filedialog, ttk, font
 
 class TextEditor:
     def __init__(self, root):
@@ -9,6 +9,10 @@ class TextEditor:
 
         self.file_paths = {}  # To store file paths for each tab
         self.tab_counter = 1  # Counter to name new tabs
+
+        self.theme = "light"  # Default theme
+        self.font_family = "TkDefaultFont"  # Default font
+        self.font_size = 12  # Default font size
 
         self.create_widgets()
 
@@ -28,18 +32,30 @@ class TextEditor:
         edit_menu = tk.Menu(menubar, tearoff=0)
         edit_menu.add_command(label="Undo (Ctrl+Z)", command=self.undo)
         edit_menu.add_command(label="Redo (Ctrl+Y)", command=self.redo)
-        edit_menu.add_separator()  # Separator between undo/redo and cut/copy/paste
+        edit_menu.add_separator()
         edit_menu.add_command(label="Cut (Ctrl+X)", command=self.cut)
         edit_menu.add_command(label="Copy (Ctrl+C)", command=self.copy)
         edit_menu.add_command(label="Paste (Ctrl+V)", command=self.paste)
         menubar.add_cascade(label="Edit", menu=edit_menu)
 
+        # Create the "Settings" menu
+        settings_menu = tk.Menu(menubar, tearoff=0)
+        settings_menu.add_command(label="Toggle Theme", command=self.toggle_theme)
+        settings_menu.add_command(label="Change Font", command=self.change_font)
+        menubar.add_cascade(label="Settings", menu=settings_menu)
+
         # Add the menu bar to the root window
         self.root.config(menu=menubar)
 
-        # Create a tab control
-        self.tab_control = ttk.Notebook(self.root)
-        self.tab_control.pack(expand=1, fill='both')
+        # Create a custom tab control
+        self.tab_frame = ttk.Frame(self.root)
+        self.tab_frame.pack(fill='x')
+
+        self.content_frame = ttk.Frame(self.root)
+        self.content_frame.pack(expand=True, fill='both')
+
+        self.tabs = []  # List to store tab buttons
+        self.text_areas = []  # List to store text areas
 
         # Create the first tab
         self.new_file()
@@ -55,14 +71,26 @@ class TextEditor:
         self.root.bind('<Control-c>', lambda event: self.copy())
         self.root.bind('<Control-v>', lambda event: self.paste())
 
+        # Bind window resize event
+        self.root.bind('<Configure>', lambda event: self.update_tab_layout())
+
     def new_file(self, event=None):
         """Creates a new tab for a new file."""
-        text_area = tk.Text(self.tab_control)
         tab_name = f"Untitled-{self.tab_counter}"
         self.file_paths[tab_name] = None  # No path yet for new files
-        self.tab_control.add(text_area, text=tab_name)
-        self.tab_control.select(text_area)
+
+        # Create a new button for the tab
+        tab_button = ttk.Button(self.tab_frame, text=tab_name, command=lambda: self.select_tab(len(self.tabs)))
+        self.tabs.append(tab_button)
+
+        # Create a new text area
+        text_area = tk.Text(self.content_frame, font=(self.font_family, self.font_size))
+        self.text_areas.append(text_area)
+        self.apply_theme(text_area)
+
         self.tab_counter += 1
+        self.update_tab_layout()
+        self.select_tab(len(self.tabs) - 1)  # Select the newly created tab
 
     def open_file(self, event=None):
         """Opens an existing file."""
@@ -72,79 +100,174 @@ class TextEditor:
         if file_path:
             with open(file_path, 'r') as file:
                 content = file.read()
-                
-            text_area = tk.Text(self.tab_control)
+            
             tab_name = file_path.split("/")[-1]  # Get the file name from the path
             self.file_paths[tab_name] = file_path  # Store the file path for the tab
-            self.tab_control.add(text_area, text=tab_name)
+
+            # Create a new button for the tab
+            tab_button = ttk.Button(self.tab_frame, text=tab_name, command=lambda: self.select_tab(len(self.tabs)))
+            self.tabs.append(tab_button)
+
+            # Create a new text area and insert content
+            text_area = tk.Text(self.content_frame, font=(self.font_family, self.font_size))
             text_area.insert(tk.END, content)
-            self.tab_control.select(text_area)
+            self.text_areas.append(text_area)
+            self.apply_theme(text_area)
+
+            self.update_tab_layout()
+            self.select_tab(len(self.tabs) - 1)  # Select the newly opened tab
 
     def save_file(self, event=None):
         """Saves the current file in the active tab."""
-        current_tab = self.tab_control.select()
-        tab_text = self.tab_control.tab(current_tab, "text")
-        
-        if self.file_paths[tab_text]:
-            # If the file has already been saved before, save directly
-            with open(self.file_paths[tab_text], 'w') as file:
-                file.write(self.get_text_content())
-        else:
-            # If it's a new file, call save as
-            self.save_as()
+        current_tab_index = self.get_current_tab_index()
+        if current_tab_index is not None:
+            tab_text = self.tabs[current_tab_index]['text']
+            
+            if self.file_paths[tab_text]:
+                # If the file has already been saved before, save directly
+                with open(self.file_paths[tab_text], 'w') as file:
+                    file.write(self.get_text_content(current_tab_index))
+            else:
+                # If it's a new file, call save as
+                self.save_as()
 
     def save_as(self, event=None):
         """Save the current file as a new file."""
-        current_tab = self.tab_control.select()
-        tab_text = self.tab_control.tab(current_tab, "text")
-        
-        file_path = filedialog.asksaveasfilename(defaultextension=".txt",
-                                                 filetypes=[("Text files", "*.txt"),
-                                                            ("All files", "*.*")])
-        if file_path:
-            self.file_paths[tab_text] = file_path  # Update file path for the current tab
-            with open(file_path, 'w') as file:
-                file.write(self.get_text_content())
-            self.tab_control.tab(current_tab, text=file_path.split("/")[-1])  # Update tab title
+        current_tab_index = self.get_current_tab_index()
+        if current_tab_index is not None:
+            file_path = filedialog.asksaveasfilename(defaultextension=".txt",
+                                                     filetypes=[("Text files", "*.txt"),
+                                                                ("All files", "*.*")])
+            if file_path:
+                with open(file_path, 'w') as file:
+                    file.write(self.get_text_content(current_tab_index))
+                
+                # Update tab name and file path
+                tab_name = file_path.split("/")[-1]
+                self.tabs[current_tab_index]['text'] = tab_name
+                self.file_paths[tab_name] = file_path
+                self.update_tab_layout()
 
-    def get_text_content(self):
-        """Returns the content of the current tab's text area."""
-        current_tab = self.tab_control.select()
-        text_widget = self.tab_control.nametowidget(current_tab)
-        return text_widget.get("1.0", tk.END)
+    def get_text_content(self, tab_index):
+        """Returns the content of the specified tab's text area."""
+        return self.text_areas[tab_index].get("1.0", tk.END)
+
+    def get_current_tab_index(self):
+        """Returns the index of the currently selected tab."""
+        for i, text_area in enumerate(self.text_areas):
+            if text_area.winfo_viewable():
+                return i
+        return None
+
+    def select_tab(self, index):
+        """Select the tab at the given index."""
+        for i, tab in enumerate(self.tabs):
+            if i == index:
+                tab.config(style='Selected.TButton')
+                self.text_areas[i].pack(expand=True, fill='both')
+            else:
+                tab.config(style='TButton')
+                self.text_areas[i].pack_forget()
+
+    def update_tab_layout(self):
+        """Update the layout of tabs to fill the entire width."""
+        for tab in self.tabs:
+            tab.pack_forget()
+
+        tab_width = self.root.winfo_width() // len(self.tabs) if self.tabs else self.root.winfo_width()
+        for tab in self.tabs:
+            tab.pack(side='left', expand=True, fill='x')
+            tab.config(width=tab_width)
 
     def undo(self, event=None):
         """Undo the last action."""
-        current_tab = self.tab_control.select()
-        text_widget = self.tab_control.nametowidget(current_tab)
-        text_widget.event_generate("<<Undo>>")
+        current_tab_index = self.get_current_tab_index()
+        if current_tab_index is not None:
+            self.text_areas[current_tab_index].event_generate("<<Undo>>")
 
     def redo(self, event=None):
         """Redo the last undone action."""
-        current_tab = self.tab_control.select()
-        text_widget = self.tab_control.nametowidget(current_tab)
-        text_widget.event_generate("<<Redo>>")
+        current_tab_index = self.get_current_tab_index()
+        if current_tab_index is not None:
+            self.text_areas[current_tab_index].event_generate("<<Redo>>")
 
     def cut(self, event=None):
         """Cut the selected text."""
-        current_tab = self.tab_control.select()
-        text_widget = self.tab_control.nametowidget(current_tab)
-        text_widget.event_generate("<<Cut>>")
+        current_tab_index = self.get_current_tab_index()
+        if current_tab_index is not None:
+            self.text_areas[current_tab_index].event_generate("<<Cut>>")
 
     def copy(self, event=None):
         """Copy the selected text."""
-        current_tab = self.tab_control.select()
-        text_widget = self.tab_control.nametowidget(current_tab)
-        text_widget.event_generate("<<Copy>>")
+        current_tab_index = self.get_current_tab_index()
+        if current_tab_index is not None:
+            self.text_areas[current_tab_index].event_generate("<<Copy>>")
 
     def paste(self, event=None):
         """Paste from the clipboard."""
-        current_tab = self.tab_control.select()
-        text_widget = self.tab_control.nametowidget(current_tab)
-        text_widget.event_generate("<<Paste>>")
+        current_tab_index = self.get_current_tab_index()
+        if current_tab_index is not None:
+            self.text_areas[current_tab_index].event_generate("<<Paste>>")
 
+    def toggle_theme(self):
+        """Toggle between light and dark themes."""
+        self.theme = "dark" if self.theme == "light" else "light"
+        for text_area in self.text_areas:
+            self.apply_theme(text_area)
+        self.update_tab_layout()
+
+    def apply_theme(self, widget):
+        """Apply the current theme to a widget."""
+        if self.theme == "light":
+            widget.config(bg="white", fg="black")
+            self.root.config(bg="lightgray")
+            self.tab_frame.config(style='Light.TFrame')
+            for tab in self.tabs:
+                tab.config(style='Light.TButton')
+        else:
+            widget.config(bg="black", fg="white")
+            self.root.config(bg="darkgray")
+            self.tab_frame.config(style='Dark.TFrame')
+            for tab in self.tabs:
+                tab.config(style='Dark.TButton')
+
+    def change_font(self):
+        """Open a dialog to change font and font size."""
+        font_window = tk.Toplevel(self.root)
+        font_window.title("Font Settings")
+
+        # Font family selection
+        ttk.Label(font_window, text="Font Family:").grid(row=0, column=0, padx=5, pady=5)
+        font_family_var = tk.StringVar(value=self.font_family)
+        font_family_combo = ttk.Combobox(font_window, textvariable=font_family_var, values=font.families())
+        font_family_combo.grid(row=0, column=1, padx=5, pady=5)
+
+        # Font size selection
+        ttk.Label(font_window, text="Font Size:").grid(row=1, column=0, padx=5, pady=5)
+        font_size_var = tk.IntVar(value=self.font_size)
+        font_size_spin = ttk.Spinbox(font_window, from_=8, to=72, textvariable=font_size_var)
+        font_size_spin.grid(row=1, column=1, padx=5, pady=5)
+
+        # Apply button
+        ttk.Button(font_window, text="Apply", command=lambda: self.apply_font(font_family_var.get(), font_size_var.get())).grid(row=2, column=0, columnspan=2, pady=10)
+
+    def apply_font(self, family, size):
+        """Apply the selected font to all text widgets."""
+        self.font_family = family
+        self.font_size = size
+        for text_area in self.text_areas:
+            text_area.config(font=(family, size))
 
 if __name__ == "__main__":
     root = tk.Tk()
+    
+    # Configure styles for light and dark themes
+    style = ttk.Style()
+    style.configure('Light.TFrame', background='lightgray')
+    style.configure('Dark.TFrame', background='darkgray')
+    style.configure('Light.TButton', background='lightgray')
+    style.configure('Dark.TButton', background='darkgray')
+    style.configure('Selected.TButton', background='gray')
+
     app = TextEditor(root)
     root.mainloop()
