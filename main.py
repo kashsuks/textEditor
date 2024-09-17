@@ -1,17 +1,41 @@
 import tkinter as tk
 from tkinter import filedialog, Menu
 
+def save_file():
+    # Save to an existing location
+    global file_path
+    if file_path:
+        with open(file_path, 'w') as file:
+            file.write(text.get("1.0", "end-1c"))
+    else:
+        save_as()
+
 def save_as():
+    global file_path
     t = text.get("1.0", "end-1c")
-    savelocation = filedialog.asksaveasfilename(defaultextension=".txt",
-                                               filetypes=[("Text files", "*.txt"),
-                                                          ("All files", "*.*")])
-    if savelocation:
+    file_path = filedialog.asksaveasfilename(defaultextension=".txt",filetypes=[("Text files", "*.txt"),("All files", "*.*")])
+    if file_path:
         try:
-            with open(savelocation, "w") as file1:
+            with open(file_path, "w") as file1:
                 file1.write(t)
         except IOError as e:
             print(f"Error saving file: {e}")
+
+def open_file():
+    global file_path
+    file_path = filedialog.askopenfilename(defaultextension=".txt",
+                                           filetypes=[("Text files", "*.txt"),
+                                                      ("All files", "*.*")])
+    if file_path:
+        with open(file_path, 'r') as file:
+            content = file.read()
+            text.delete("1.0", tk.END)  # Clear the text area
+            text.insert(tk.END, content)  # Insert file content into text area
+
+def new_file():
+    global file_path
+    file_path = None
+    text.delete("1.0", tk.END)  # Clear the text area for a new file
 
 def font_helvetica():
     text.config(font="Helvetica")
@@ -45,11 +69,12 @@ def handle_configure(event=None):
         text.config(width=root.winfo_width(), height=root.winfo_height())
 
 root = tk.Tk()
-root.title("Text Editor - Kashyap Sukshavasi")
+root.title("Text Editor")
 root.geometry("800x600")  # Initial window size
 
 # Initialize the fullscreen variable globally
 fullscreen = False
+file_path = None
 
 text = tk.Text(root)
 text.grid(sticky="nsew")
@@ -58,16 +83,31 @@ text.grid(sticky="nsew")
 root.grid_rowconfigure(0, weight=1)
 root.grid_columnconfigure(0, weight=1)
 
-button = tk.Button(root, text="Save", command=save_as)
-button.grid()
+# Create a menubar
+menubar = Menu(root)
 
-font = tk.Menubutton(root, text="Font")
-font.grid()
-font.menu = Menu(font, tearoff=0)
-font["menu"] = font.menu
+# Create the "File" menu
+file_menu = Menu(menubar, tearoff=0)
+file_menu.add_command(label="New File", command=new_file)
+file_menu.add_command(label="Open File", command=open_file)
+file_menu.add_command(label="Save File", command=save_file)
+file_menu.add_command(label="Save As", command=save_as)
+file_menu.add_separator()  # Adds a horizontal line separator
+file_menu.add_command(label="Exit", command=root.quit)
 
-font.menu.add_checkbutton(label="Courier", command=font_courier)
-font.menu.add_checkbutton(label="Helvetica", command=font_helvetica)
+# Add the "File" menu to the menubar
+menubar.add_cascade(label="File", menu=file_menu)
+
+# Create the "Font" menu
+font_menu = Menu(menubar, tearoff=0)
+font_menu.add_command(label="Helvetica", command=font_helvetica)
+font_menu.add_command(label="Courier", command=font_courier)
+
+# Add the "Font" menu to the menubar
+menubar.add_cascade(label="Font", menu=font_menu)
+
+# Set the menubar to the root window
+root.config(menu=menubar)
 
 # Bind the F11 key to toggle fullscreen
 root.bind("<F11>", toggle_fullscreen)
