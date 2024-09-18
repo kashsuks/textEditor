@@ -1,5 +1,7 @@
 import tkinter as tk
 from tkinter import filedialog, ttk, font
+import subprocess
+import sys
 
 class TextEditor:
     def __init__(self, root):
@@ -43,6 +45,11 @@ class TextEditor:
         settings_menu.add_command(label="Toggle Theme", command=self.toggle_theme)
         settings_menu.add_command(label="Change Font", command=self.change_font)
         menubar.add_cascade(label="Settings", menu=settings_menu)
+
+        # Create the "Terminal" menu
+        terminal_menu = tk.Menu(menubar, tearoff=0)
+        terminal_menu.add_command(label="New Terminal", command=self.open_terminal)
+        menubar.add_cascade(label="Terminal", menu=terminal_menu)
 
         # Add the menu bar to the root window
         self.root.config(menu=menubar)
@@ -204,21 +211,10 @@ class TextEditor:
             self.text_areas[current_tab_index].event_generate("<<Copy>>")
 
     def paste(self, event=None):
-        """Paste from the clipboard."""
+        """Paste text from clipboard."""
         current_tab_index = self.get_current_tab_index()
         if current_tab_index is not None:
             self.text_areas[current_tab_index].event_generate("<<Paste>>")
-
-    def toggle_theme(self):
-        """Toggles between light and dark mode."""
-        if self.theme == "light":
-            self.theme = "dark"
-        else:
-            self.theme = "light"
-        
-        # Apply the new theme to all text areas
-        for text_area in self.text_areas:
-            self.apply_theme(text_area)
 
     def apply_theme(self, text_area):
         """Applies the current theme to the text area."""
@@ -226,6 +222,17 @@ class TextEditor:
             text_area.config(bg="#333333", fg="#ffffff", insertbackground='white')  # Set background, foreground, and cursor color
         else:
             text_area.config(bg="#ffffff", fg="#000000", insertbackground='black')  # Set background, foreground, and cursor color
+
+    def toggle_theme(self):
+        """Toggles between light and dark theme."""
+        if self.theme == "dark":
+            self.theme = "light"
+        else:
+            self.theme = "dark"
+        
+        # Apply the new theme to all text areas
+        for text_area in self.text_areas:
+            self.apply_theme(text_area)
 
     def change_font(self):
         """Changes the font family and size."""
@@ -242,6 +249,15 @@ class TextEditor:
                     text_area.config(font=(self.font_family, self.font_size))
             except ValueError:
                 tk.messagebox.showerror("Invalid Font", "Please enter the font family and size in the format 'Font 12'.")
+
+    def open_terminal(self):
+        """Opens a new terminal window."""
+        if sys.platform == "darwin":  # macOS
+            subprocess.Popen(["open", "-a", "Terminal"])
+        elif sys.platform == "win32":  # Windows
+            subprocess.Popen("start", shell=True)
+        else:  # Assume Linux
+            subprocess.Popen(["xterm"])
 
 if __name__ == "__main__":
     root = tk.Tk()
