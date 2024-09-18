@@ -19,6 +19,13 @@ class TextEditor:
         self.create_widgets()
 
     def create_widgets(self):
+        # Create a style object
+        self.style = ttk.Style()
+        
+        # Configure default theme styles
+        self.style.configure("TFrame", background="#ffffff")  # Default light theme
+        self.style.configure("TButton", background="#ffffff", foreground="#000000")
+        
         # Create a menu bar
         menubar = tk.Menu(self.root)
 
@@ -43,7 +50,7 @@ class TextEditor:
         # Create the "Settings" menu
         settings_menu = tk.Menu(menubar, tearoff=0)
         settings_menu.add_command(label="Toggle Theme", command=self.toggle_theme)
-        settings_menu.add_command(label="Change Font", command=self.change_font)
+        settings_menu.add_command(label="Font Settings", command=self.open_font_settings)
         menubar.add_cascade(label="Settings", menu=settings_menu)
 
         # Create the "Terminal" menu
@@ -55,10 +62,10 @@ class TextEditor:
         self.root.config(menu=menubar)
 
         # Create a custom tab control
-        self.tab_frame = ttk.Frame(self.root)
+        self.tab_frame = ttk.Frame(self.root, style="TFrame")
         self.tab_frame.pack(fill='x')
 
-        self.content_frame = ttk.Frame(self.root)
+        self.content_frame = ttk.Frame(self.root, style="TFrame")
         self.content_frame.pack(expand=True, fill='both')
 
         self.tabs = []  # List to store tab buttons
@@ -87,7 +94,7 @@ class TextEditor:
         self.file_paths[tab_name] = None  # No path yet for new files
 
         # Create a new button for the tab
-        tab_button = ttk.Button(self.tab_frame, text=tab_name, command=lambda: self.select_tab(len(self.tabs)))
+        tab_button = ttk.Button(self.tab_frame, text=tab_name, command=lambda: self.select_tab(len(self.tabs)), style="TButton")
         self.tabs.append(tab_button)
 
         # Create a new text area
@@ -112,7 +119,7 @@ class TextEditor:
             self.file_paths[tab_name] = file_path  # Store the file path for the tab
 
             # Create a new button for the tab
-            tab_button = ttk.Button(self.tab_frame, text=tab_name, command=lambda: self.select_tab(len(self.tabs)))
+            tab_button = ttk.Button(self.tab_frame, text=tab_name, command=lambda: self.select_tab(len(self.tabs)), style="TButton")
             self.tabs.append(tab_button)
 
             # Create a new text area and insert content
@@ -199,13 +206,13 @@ class TextEditor:
             self.text_areas[current_tab_index].event_generate("<<Redo>>")
 
     def cut(self, event=None):
-        """Cut the selected text."""
+        """Cut text to clipboard."""
         current_tab_index = self.get_current_tab_index()
         if current_tab_index is not None:
             self.text_areas[current_tab_index].event_generate("<<Cut>>")
 
     def copy(self, event=None):
-        """Copy the selected text."""
+        """Copy text to clipboard."""
         current_tab_index = self.get_current_tab_index()
         if current_tab_index is not None:
             self.text_areas[current_tab_index].event_generate("<<Copy>>")
@@ -216,55 +223,64 @@ class TextEditor:
         if current_tab_index is not None:
             self.text_areas[current_tab_index].event_generate("<<Paste>>")
 
-    def apply_theme(self, text_area):
-        """Applies the current theme to the text area."""
-        if self.theme == "dark":
-            text_area.config(bg="#333333", fg="#ffffff", insertbackground='white')  # Set background, foreground, and cursor color
-        else:
-            text_area.config(bg="#ffffff", fg="#000000", insertbackground='black')  # Set background, foreground, and cursor color
-
     def toggle_theme(self):
-        """Toggles between light and dark theme."""
-        if self.theme == "dark":
-            self.theme = "light"
-        else:
+        """Toggle between light and dark themes."""
+        if self.theme == "light":
             self.theme = "dark"
-        
-        # Apply the new theme to all text areas
-        for text_area in self.text_areas:
-            self.apply_theme(text_area)
+            bg_color = "#2e2e2e"
+            fg_color = "#ffffff"
+            self.style.configure("TFrame", background=bg_color)
+            self.style.configure("TButton", background=bg_color, foreground=fg_color)
+            self.root.config(bg=bg_color)
+            for text_area in self.text_areas:
+                text_area.config(bg=bg_color, fg=fg_color)
+                self.apply_theme(text_area)
+            self.update_tab_layout()
+        else:
+            self.theme = "light"
+            bg_color = "#ffffff"
+            fg_color = "#000000"
+            self.style.configure("TFrame", background=bg_color)
+            self.style.configure("TButton", background=bg_color, foreground=fg_color)
+            self.root.config(bg=bg_color)
+            for text_area in self.text_areas:
+                text_area.config(bg=bg_color, fg=fg_color)
+                self.apply_theme(text_area)
+            self.update_tab_layout()
 
-    def change_font(self):
-        """Changes the font family and size."""
-        new_font = tk.simpledialog.askstring("Font", "Enter the font family and size (e.g., 'Arial 12'):")
-        if new_font:
+    def apply_theme(self, text_area=None):
+        """Apply the current theme to all text areas and the tab frame."""
+        bg_color = "#ffffff" if self.theme == "light" else "#2e2e2e"
+        fg_color = "#000000" if self.theme == "light" else "#ffffff"
+        
+        if text_area:
+            text_area.config(bg=bg_color, fg=fg_color, insertbackground='white' if self.theme == 'dark' else 'black')
+
+        # Apply the background color using the correct method
+        self.style.configure("TFrame", background=bg_color)
+
+    def open_font_settings(self):
+        """Open the font settings dialog."""
+        font_family = simpledialog.askstring("Font Family", "Enter the font family:", initialvalue=self.font_family)
+        if font_family:
             try:
-                # Split the input into font family and size
-                parts = new_font.split()
-                if len(parts) != 2:
-                    raise ValueError("Please enter both font family and size.")
-                
-                family, size = parts
-                size = int(size)
-                
-                # Update font properties
-                self.font_family = family
-                self.font_size = size
-                
-                # Apply the new font to all text areas
-                for text_area in self.text_areas:
-                    text_area.config(font=(self.font_family, self.font_size))
-            except ValueError as e:
-                tk.messagebox.showerror("Invalid Font", f"Error: {e}. Please enter the font family and size in the format 'Font 12'.")
+                self.font_family = font_family
+                font_size = simpledialog.askinteger("Font Size", "Enter the font size:", initialvalue=self.font_size, minvalue=1)
+                if font_size:
+                    self.font_size = font_size
+                    for text_area in self.text_areas:
+                        text_area.config(font=(self.font_family, self.font_size))
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to apply font settings: {e}")
 
     def open_terminal(self):
-        """Opens a new terminal window."""
-        if sys.platform == "darwin":  # macOS
+        """Open a new terminal window."""
+        if sys.platform == "win32":
+            subprocess.Popen(["start", "cmd"], shell=True)
+        elif sys.platform == "darwin":
             subprocess.Popen(["open", "-a", "Terminal"])
-        elif sys.platform == "win32":  # Windows
-            subprocess.Popen("start", shell=True)
-        else:  # Assume Linux
-            subprocess.Popen(["xterm"])
+        else:
+            subprocess.Popen(["gnome-terminal"])  # For Linux-based systems
 
 if __name__ == "__main__":
     root = tk.Tk()
