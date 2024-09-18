@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, ttk, font
+from tkinter import filedialog, ttk, simpledialog, messagebox
 import subprocess
 import sys
 
@@ -177,14 +177,14 @@ class TextEditor:
                 self.text_areas[i].pack_forget()
 
     def update_tab_layout(self):
-        """Update the layout of tabs to fill the entire width."""
-        for tab in self.tabs:
-            tab.pack_forget()
-
-        tab_width = self.root.winfo_width() // len(self.tabs) if self.tabs else self.root.winfo_width()
-        for tab in self.tabs:
-            tab.pack(side='left', expand=True, fill='x')
-            tab.config(width=tab_width)
+        """Update the layout of the tabs and text areas."""
+        num_tabs = len(self.tabs)
+        if num_tabs > 0:
+            width = 100 / num_tabs
+            for i, tab in enumerate(self.tabs):
+                tab.place(x=width * i, relwidth=width / 100, anchor='nw', height=30)
+            for i, text_area in enumerate(self.text_areas):
+                text_area.place(x=0, y=30, relwidth=1, relheight=1)
 
     def undo(self, event=None):
         """Undo the last action."""
@@ -236,19 +236,26 @@ class TextEditor:
 
     def change_font(self):
         """Changes the font family and size."""
-        new_font = filedialog.askstring("Font", "Enter the font family and size (e.g., 'Arial 12'):")
+        new_font = tk.simpledialog.askstring("Font", "Enter the font family and size (e.g., 'Arial 12'):")
         if new_font:
             try:
-                family, size = new_font.split()
+                # Split the input into font family and size
+                parts = new_font.split()
+                if len(parts) != 2:
+                    raise ValueError("Please enter both font family and size.")
+                
+                family, size = parts
                 size = int(size)
+                
+                # Update font properties
                 self.font_family = family
                 self.font_size = size
-
+                
                 # Apply the new font to all text areas
                 for text_area in self.text_areas:
                     text_area.config(font=(self.font_family, self.font_size))
-            except ValueError:
-                tk.messagebox.showerror("Invalid Font", "Please enter the font family and size in the format 'Font 12'.")
+            except ValueError as e:
+                tk.messagebox.showerror("Invalid Font", f"Error: {e}. Please enter the font family and size in the format 'Font 12'.")
 
     def open_terminal(self):
         """Opens a new terminal window."""
