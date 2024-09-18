@@ -14,7 +14,23 @@ class TextEditor:
         self.font_family = "TkDefaultFont"  # Default font
         self.font_size = 12  # Default font size
 
+        # Configure styles
+        self.configure_styles()
+
         self.create_widgets()
+
+    def configure_styles(self):
+        """Configure styles for the themes."""
+        style = ttk.Style()
+        # Light theme styles
+        style.configure('Light.TFrame', background='#f0f0f0')
+        style.configure('Light.TButton', background='#f0f0f0', borderwidth=0, relief='flat')
+        style.configure('Light.TLabel', background='#f0f0f0', foreground='#000000')
+
+        # Dark theme styles
+        style.configure('Dark.TFrame', background='#303030')
+        style.configure('Dark.TButton', background='#303030', borderwidth=0, relief='flat')
+        style.configure('Dark.TLabel', background='#303030', foreground='#ffffff')
 
     def create_widgets(self):
         # Create a menu bar
@@ -48,10 +64,10 @@ class TextEditor:
         self.root.config(menu=menubar)
 
         # Create a custom tab control
-        self.tab_frame = ttk.Frame(self.root)
+        self.tab_frame = ttk.Frame(self.root, style='Light.TFrame')
         self.tab_frame.pack(fill='x')
 
-        self.content_frame = ttk.Frame(self.root)
+        self.content_frame = ttk.Frame(self.root, style='Light.TFrame')
         self.content_frame.pack(expand=True, fill='both')
 
         self.tabs = []  # List to store tab buttons
@@ -80,7 +96,7 @@ class TextEditor:
         self.file_paths[tab_name] = None  # No path yet for new files
 
         # Create a new button for the tab
-        tab_button = ttk.Button(self.tab_frame, text=tab_name, command=lambda: self.select_tab(len(self.tabs)))
+        tab_button = ttk.Button(self.tab_frame, text=tab_name, style='Light.TButton', command=lambda: self.select_tab(len(self.tabs)))
         self.tabs.append(tab_button)
 
         # Create a new text area
@@ -105,7 +121,7 @@ class TextEditor:
             self.file_paths[tab_name] = file_path  # Store the file path for the tab
 
             # Create a new button for the tab
-            tab_button = ttk.Button(self.tab_frame, text=tab_name, command=lambda: self.select_tab(len(self.tabs)))
+            tab_button = ttk.Button(self.tab_frame, text=tab_name, style='Light.TButton', command=lambda: self.select_tab(len(self.tabs)))
             self.tabs.append(tab_button)
 
             # Create a new text area and insert content
@@ -163,10 +179,10 @@ class TextEditor:
         """Select the tab at the given index."""
         for i, tab in enumerate(self.tabs):
             if i == index:
-                tab.config(style='Selected.TButton')
+                tab.config(style='Light.TButton')  # Update the style for selected tab
                 self.text_areas[i].pack(expand=True, fill='both')
             else:
-                tab.config(style='TButton')
+                tab.config(style='Light.TButton')  # Update the style for unselected tabs
                 self.text_areas[i].pack_forget()
 
     def update_tab_layout(self):
@@ -180,13 +196,13 @@ class TextEditor:
             tab.config(width=tab_width)
 
     def undo(self, event=None):
-        """Undo the last action."""
+        """Undo the last action in the current text area."""
         current_tab_index = self.get_current_tab_index()
         if current_tab_index is not None:
             self.text_areas[current_tab_index].event_generate("<<Undo>>")
 
     def redo(self, event=None):
-        """Redo the last undone action."""
+        """Redo the last undone action in the current text area."""
         current_tab_index = self.get_current_tab_index()
         if current_tab_index is not None:
             self.text_areas[current_tab_index].event_generate("<<Redo>>")
@@ -219,17 +235,15 @@ class TextEditor:
     def apply_theme(self, widget):
         """Apply the current theme to a widget."""
         if self.theme == "light":
-            widget.config(bg="#f0f0f0", fg="black")  # Light theme background color
-            self.root.config(bg="#e0e0e0")  # Light theme window background color
             self.tab_frame.config(style='Light.TFrame')
-            for tab in self.tabs:
-                tab.config(style='Light.TButton')
+            widget.config(bg="#f0f0f0", fg="#000000")
+            self.root.config(bg="#d3d3d3")
+            self.tab_frame.config(style='Light.TFrame')
         else:
-            widget.config(bg="#2e2e2e", fg="white")  # Dark theme background color
-            self.root.config(bg="#3c3c3c")  # Dark theme window background color
             self.tab_frame.config(style='Dark.TFrame')
-            for tab in self.tabs:
-                tab.config(style='Dark.TButton')
+            widget.config(bg="#303030", fg="#ffffff")
+            self.root.config(bg="#404040")
+            self.tab_frame.config(style='Dark.TFrame')
 
     def change_font(self):
         """Open a dialog to change font and font size."""
@@ -261,13 +275,5 @@ class TextEditor:
 if __name__ == "__main__":
     root = tk.Tk()
     
-    # Configure styles for light and dark themes
-    style = ttk.Style()
-    style.configure('Light.TFrame', background='#e0e0e0')  # Light theme frame color
-    style.configure('Dark.TFrame', background='#3c3c3c')  # Dark theme frame color
-    style.configure('Light.TButton', background='#f0f0f0')  # Light theme button color
-    style.configure('Dark.TButton', background='#2e2e2e')  # Dark theme button color
-    style.configure('Selected.TButton', background='gray')
-
     app = TextEditor(root)
     root.mainloop()
