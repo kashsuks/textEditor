@@ -219,14 +219,14 @@ class TextEditor:
     def apply_theme(self, widget):
         """Apply the current theme to a widget."""
         if self.theme == "light":
-            widget.config(bg="white", fg="black")
-            self.root.config(bg="lightgray")
+            widget.config(bg="#f0f0f0", fg="black")  # Light theme background color
+            self.root.config(bg="#e0e0e0")  # Light theme window background color
             self.tab_frame.config(style='Light.TFrame')
             for tab in self.tabs:
                 tab.config(style='Light.TButton')
         else:
-            widget.config(bg="black", fg="white")
-            self.root.config(bg="darkgray")
+            widget.config(bg="#2e2e2e", fg="white")  # Dark theme background color
+            self.root.config(bg="#3c3c3c")  # Dark theme window background color
             self.tab_frame.config(style='Dark.TFrame')
             for tab in self.tabs:
                 tab.config(style='Dark.TButton')
@@ -263,10 +263,10 @@ if __name__ == "__main__":
     
     # Configure styles for light and dark themes
     style = ttk.Style()
-    style.configure('Light.TFrame', background='lightgray')
-    style.configure('Dark.TFrame', background='darkgray')
-    style.configure('Light.TButton', background='lightgray')
-    style.configure('Dark.TButton', background='darkgray')
+    style.configure('Light.TFrame', background='#e0e0e0')  # Light theme frame color
+    style.configure('Dark.TFrame', background='#3c3c3c')  # Dark theme frame color
+    style.configure('Light.TButton', background='#f0f0f0')  # Light theme button color
+    style.configure('Dark.TButton', background='#2e2e2e')  # Dark theme button color
     style.configure('Selected.TButton', background='gray')
 
     app = TextEditor(root)
